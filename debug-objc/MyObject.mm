@@ -7,24 +7,14 @@
 //
 
 #import "MyObject.h"
-#import "objc.h"
-#import "runtime.h"
-//#include "objc-object.h"
-//#import "objc-runtime-new.h"
-//#import <objc-object.h>
-
-//extern Class object_getClass(id obj);
-
-//extern struct objc_object;
-
-//extern Class objc_object::ISA();
+//#import "runtime.h"
 
 @implementation MyObject
 
 - (instancetype)init {
     self = [super init];
     if (self) {
-        NSLog(@"class object from instance method self :%x", object_getClass(self));
+//        NSLog(@"class object from instance method self :%x", object_getClass(self));
         [MyObject classPointer];
         [MyObject metaclassPointer];
     }
@@ -39,7 +29,7 @@
 
 
 + (void)metaclassPointer {
-    NSLog(@"metaclass object:%x", object_getClass(self));
+//    NSLog(@"metaclass object:%x", object_getClass(self));
 }
 
 

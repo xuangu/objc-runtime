@@ -6,9 +6,9 @@
 //
 
 #import "Aspects.h"
-#import <libkern/OSAtomic.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
+#import <libkern/OSAtomic.h>
 
 #define AspectLog(...)
 //#define AspectLog(...) do { NSLog(__VA_ARGS__); }while(0)
@@ -70,6 +70,7 @@ typedef struct _AspectBlock {
 @property (nonatomic, strong) Class trackedClass;
 @property (nonatomic, readonly) NSString *trackedClassName;
 @property (nonatomic, strong) NSMutableSet *selectorNames;
+// {"selectorName" : (NSMutiableSet<AspectTracker *> *)subclassTrackers}
 @property (nonatomic, strong) NSMutableDictionary *selectorNamesToSubclassTrackers;
 - (void)addSubclassTracker:(AspectTracker *)subclassTracker hookingSelectorName:(NSString *)selectorName;
 - (void)removeSubclassTracker:(AspectTracker *)subclassTracker hookingSelectorName:(NSString *)selectorName;
@@ -632,14 +633,16 @@ static BOOL aspect_isSelectorAllowedAndTrack(NSObject *self, SEL selector, Aspec
                 swizzledClassesDict[(id<NSCopying>)currentClass] = tracker;
             }
             if (subclassTracker) {
+                
                 [tracker addSubclassTracker:subclassTracker hookingSelectorName:selectorName];
             } else {
+                // 首先将要被hook的方法加入到本tracker的selectorNames集合中（即将针对于某一个类的所有被hook的方法集中起来到一个tracker类中，这样就可以通过全局的aspect_getSwizzledClassesDict字典的该类的key，找到该类对应的tracker，从而再根据selectorNames找到对应的该类中已经被hook的所有方法集合）
                 [tracker.selectorNames addObject:selectorName];
             }
 
             // All superclasses get marked as having a subclass that is modified.
             subclassTracker = tracker;
-        }while ((currentClass = class_getSuperclass(currentClass)));
+        } while ((currentClass = class_getSuperclass(currentClass)));
 	} else {
 		return YES;
 	}
@@ -691,8 +694,10 @@ static void aspect_deregisterTrackedSelector(id self, SEL selector) {
         trackerSet = [NSMutableSet new];
         self.selectorNamesToSubclassTrackers[selectorName] = trackerSet;
     }
+    // 用Set，防止重复元素替换
     [trackerSet addObject:subclassTracker];
 }
+
 - (void)removeSubclassTracker:(AspectTracker *)subclassTracker hookingSelectorName:(NSString *)selectorName {
     NSMutableSet *trackerSet = self.selectorNamesToSubclassTrackers[selectorName];
     [trackerSet removeObject:subclassTracker];
